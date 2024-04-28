@@ -368,6 +368,7 @@ static void togglegaps(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void togglescratch(const Arg *arg);
 static void toggleview(const Arg *arg);
+static void moveresizekb(const Arg *arg);
 static void unlocksession(struct wl_listener *listener, void *data);
 static void unmaplayersurfacenotify(struct wl_listener *listener, void *data);
 static void unmapnotify(struct wl_listener *listener, void *data);
@@ -2876,6 +2877,24 @@ togglegaps(const Arg *arg)
 {
 	selmon->gaps = !selmon->gaps;
 	arrange(selmon);
+}
+
+void
+moveresizekb(const Arg *arg)
+{
+	Client *c = focustop(selmon);
+	Monitor *m = selmon;
+
+	if(!(m && arg && arg->v && c && c->isfloating)) {
+		return;
+	}
+
+	resize(c, (struct wlr_box){
+		.x = c->geom.x + ((int *)arg->v)[0],
+		.y = c->geom.y + ((int *)arg->v)[1],
+		.width = c->geom.width + ((int *)arg->v)[2],
+		.height = c->geom.height + ((int *)arg->v)[3],
+	}, 1);
 }
 
 void
