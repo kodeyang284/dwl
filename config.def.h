@@ -139,7 +139,7 @@ static const char *floatterm[] = { __TERMINAL, "--class", "floatterm", NULL };
 
 /* scratchpad commands */
 static const char *scratchpadcmd[] = {"s", __TERMINAL,"-T", "scratchpad", NULL };
-static const char *musicfoxcmd[]   = {"m", __TERMINAL,"-T", "musicfox", NULL };
+static const char *musicfoxcmd[]   = {"m", __TERMINAL,"-T", "musicfox", "-e", "musicfox", NULL };
 
 
 static const Key keys[] = {
