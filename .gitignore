@@ -4,3 +4,9 @@ dwl
 *-protocol.h
 .ccls-cache
 config.h
+.cache/**
+*rej
+*orig
+dwl-patches
+compile_commands.json
+.*

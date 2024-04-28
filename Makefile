@@ -9,9 +9,10 @@ DWLDEVCFLAGS = -g -pedantic -Wall -Wextra -Wdeclaration-after-statement -Wno-unu
 	-Werror=strict-prototypes -Werror=implicit -Werror=return-type -Werror=incompatible-pointer-types -Wfloat-conversion
 
 # CFLAGS / LDFLAGS
-PKGS      = wlroots wayland-server xkbcommon libinput $(XLIBS)
+PKGS      = wlroots wayland-server xkbcommon libinput pixman-1 fcft $(XLIBS)
 DWLCFLAGS = `$(PKG_CONFIG) --cflags $(PKGS)` $(DWLCPPFLAGS) $(DWLDEVCFLAGS) $(CFLAGS)
 LDLIBS    = `$(PKG_CONFIG) --libs $(PKGS)` $(LIBS)
+DWLCFLAGS += $(addprefix -I, /usr/include/pixman-1/)
 
 all: dwl
 dwl: dwl.o util.o
@@ -41,7 +42,7 @@ xdg-shell-protocol.h:
 config.h:
 	cp config.def.h $@
 clean:
-	rm -f dwl *.o *-protocol.h
+	rm -f dwl *.o *-protocol.h config.h
 
 dist: clean
 	mkdir -p dwl-$(VERSION)
