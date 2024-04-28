@@ -34,11 +34,14 @@ static char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 static int log_level = WLR_ERROR;
 
 static const Rule rules[] = {
-	/* app_id             title       tags mask     isfloating   monitor */
+	/* app_id             title       tags mask  switchtotag   isfloating   monitor  scratch key*/
 	/* examples: */
-	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
-	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
-	{ "floatterm",        NULL,       0,            1,           -1 }, /* Start on ONLY tag "9" */
+	{ "Gimp_EXAMPLE",     NULL,       0,         0,            1,           -1,       0   }, /* Start on currently visible tags floating, not tiled */
+	{ "firefox",          NULL,       1 << 1,    1,            0,           -1,       0   }, /* Start on ONLY tag "2" */
+	{ "floatterm",        NULL,       0,         0,            1,           -1,       0   }, 
+	{ NULL,       "scratchpad",       0,         0,            1,           -1,      's'  }, 
+	{ NULL,       "musicfox",         0,         0,            1,           -1,      'm'  }, 
+	{ "scratchapp",       NULL,       0,         0,            1,           -1,       0   }, 
 };
 
 /* layout(s) */
@@ -134,12 +137,19 @@ static const char *termcmd[] = { __TERMINAL, NULL };
 static const char *menucmd[] = { "wofi", "--show", "drun", NULL };
 static const char *floatterm[] = { __TERMINAL, "--class", "floatterm", NULL };
 
+/* scratchpad commands */
+static const char *scratchpadcmd[] = {"s", __TERMINAL,"-T", "scratchpad", NULL };
+static const char *musicfoxcmd[]   = {"m", __TERMINAL,"-T", "musicfox", NULL };
+
+
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: c -> C, 2 -> at, etc. */
 	/* modifier                  key                 function        argument */
 	{ MODKEY,                    XKB_KEY_p,          spawn,          {.v = menucmd} },
 	{ MODKEY,                    XKB_KEY_Return,     spawn,          {.v = termcmd} },
 	{ MODKEY,                    XKB_KEY_x,          spawn,          {.v = floatterm} },
+	{ MODKEY,                    XKB_KEY_grave,      togglescratch,  {.v = scratchpadcmd} },
+	{ MODKEY,                    XKB_KEY_e,          togglescratch,  {.v = musicfoxcmd} },
 	{ MODKEY,                    XKB_KEY_b,          togglebar,      {0} },
 	{ MODKEY,                    XKB_KEY_j,          focusstack,     {.i = +1} },
 	{ MODKEY,                    XKB_KEY_k,          focusstack,     {.i = -1} },
@@ -156,7 +166,7 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_m,          setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                    XKB_KEY_space,      setlayout,      {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_space,      togglefloating, {0} },
-	{ MODKEY,                    XKB_KEY_e,         togglefullscreen, {0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_f,         togglefullscreen, {0} },
 	{ MODKEY,                    XKB_KEY_0,          view,           {.ui = ~0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_parenright, tag,            {.ui = ~0} },
 	{ MODKEY,                    XKB_KEY_comma,      focusmon,       {.i = WLR_DIRECTION_LEFT} },
@@ -165,6 +175,7 @@ static const Key keys[] = {
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_greater,    tagmon,         {.i = WLR_DIRECTION_RIGHT} },
 	{ MODKEY,                    XKB_KEY_o,          spawn,          SHCMD("dentry") },
 	{ MODKEY,                    XKB_KEY_w,          spawn,          SHCMD("firefox") },
+	{ MODKEY,                    XKB_KEY_bracketleft,spawn,          SHCMD("dwmapps") },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,     spawn,          SHCMD("alacritty") },
 	TAGKEYS(          XKB_KEY_1, XKB_KEY_exclam,                     0),
 	TAGKEYS(          XKB_KEY_2, XKB_KEY_at,                         1),

@@ -147,7 +147,9 @@ typedef struct {
 	unsigned int bw;
 	uint32_t tags;
 	int isfloating, isurgent, isfullscreen;
+	int switchtotag;
 	uint32_t resize; /* configure serial of a pending resize */
+	char scratchkey;
 } Client;
 
 typedef struct {
@@ -246,8 +248,10 @@ typedef struct {
 	const char *id;
 	const char *title;
 	uint32_t tags;
+	bool switchtotag;
 	int isfloating;
 	int monitor;
+	const char scratchkey;
 } Rule;
 
 typedef struct {
@@ -351,6 +355,7 @@ static void setpsel(struct wl_listener *listener, void *data);
 static void setsel(struct wl_listener *listener, void *data);
 static void setup(void);
 static void spawn(const Arg *arg);
+static void spawnscratch(const Arg *arg);
 static void startdrag(struct wl_listener *listener, void *data);
 static int status_in(int fd, unsigned int mask, void *data);
 static void tag(const Arg *arg);
@@ -361,6 +366,7 @@ static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void togglegaps(const Arg *arg);
 static void toggletag(const Arg *arg);
+static void togglescratch(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unlocksession(struct wl_listener *listener, void *data);
 static void unmaplayersurfacenotify(struct wl_listener *listener, void *data);
@@ -502,6 +508,7 @@ applyrules(Client *c)
 	Monitor *mon = selmon, *m;
 
 	c->isfloating = client_is_float_type(c);
+	c->scratchkey = 0;
 	if (!(appid = client_get_appid(c)))
 		appid = broken;
 	if (!(title = client_get_title(c)))
@@ -511,11 +518,17 @@ applyrules(Client *c)
 		if ((!r->title || strstr(title, r->title))
 				&& (!r->id || strstr(appid, r->id))) {
 			c->isfloating = r->isfloating;
+			c->scratchkey = r->scratchkey;
 			newtags |= r->tags;
 			i = 0;
 			wl_list_for_each(m, &mons, link) {
 				if (r->monitor == i++)
 					mon = m;
+			}
+			if (r->switchtotag) {
+				c->switchtotag = selmon->tagset[selmon->seltags];
+				mon->seltags ^= 1;
+				mon->tagset[selmon->seltags] = r->tags & TAGMASK;
 			}
 		}
 	}
@@ -2730,6 +2743,13 @@ spawn(const Arg *arg)
 }
 
 void
+spawnscratch(const Arg *arg)
+{
+	Arg a = { .v = (char **)arg->v + 1};
+	spawn(&a);
+}
+
+void
 startdrag(struct wl_listener *listener, void *data)
 {
 	struct wlr_drag *drag = data;
@@ -2906,6 +2926,29 @@ toggleview(const Arg *arg)
 }
 
 void
+togglescratch(const Arg *arg)
+{
+	Client *c;
+	unsigned int found = 0;
+	wl_list_for_each(c, &clients, link) {
+		if(c && c->scratchkey == ((char **)arg->v)[0][0])
+			found = 1;
+		break;
+	}
+
+	if (found) {
+		c->tags = VISIBLEON(c, selmon) ? 0 : selmon->tagset[selmon->seltags];
+		focusclient(NULL, 0);
+		arrange(selmon);
+		if (VISIBLEON(c, selmon))
+			focusclient(c, 0);
+	}
+	else
+		spawnscratch(arg);
+
+}
+
+void
 unlocksession(struct wl_listener *listener, void *data)
 {
 	SessionLock *lock = wl_container_of(listener, lock, unlock);
@@ -2952,6 +2995,10 @@ unmapnotify(struct wl_listener *listener, void *data)
 	wlr_scene_node_destroy(&c->scene->node);
 	drawbars();
 	motionnotify(0, NULL, 0, 0, 0, 0);
+	if (c->switchtotag) {
+		Arg a = { .ui = c->switchtotag };
+		view(&a);
+	}
 }
 
 void
