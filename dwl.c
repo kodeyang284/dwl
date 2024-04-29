@@ -150,6 +150,7 @@ typedef struct {
 	int switchtotag;
 	uint32_t resize; /* configure serial of a pending resize */
 	char scratchkey;
+	float cweight;
 } Client;
 
 typedef struct {
@@ -343,6 +344,7 @@ static void requeststartdrag(struct wl_listener *listener, void *data);
 static void requestmonstate(struct wl_listener *listener, void *data);
 static void resize(Client *c, struct wlr_box geo, int interact);
 static void run(char *startup_cmd);
+static void setcfact(const Arg *arg);
 static void setcursor(struct wl_listener *listener, void *data);
 static void setcursorshape(struct wl_listener *listener, void *data);
 static void setfloating(Client *c, int floating);
@@ -1124,6 +1126,7 @@ createnotify(struct wl_listener *listener, void *data)
 	c = xdg_surface->data = ecalloc(1, sizeof(*c));
 	c->surface.xdg = xdg_surface;
 	c->bw = borderpx;
+	c->cweight = 1.0;
 
 	wlr_xdg_toplevel_set_wm_capabilities(xdg_surface->toplevel,
 			WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN);
@@ -1849,7 +1852,18 @@ mapnotify(struct wl_listener *listener, void *data)
 	c->geom.height += 2 * c->bw;
 
 	/* Insert this client into client lists. */
-	wl_list_insert(&clients, &c->link);
+	i = 0;
+	wl_list_for_each(w, &clients, link) {
+		if (!VISIBLEON(w, selmon) || c->isfloating)
+			continue;
+		p = w;
+		if (++i >= selmon->nmaster)
+			break;
+	}
+	if (i > 0)
+		wl_list_insert(&p->link, &c->link);
+	else
+		wl_list_insert(&clients, &c->link);
 	wl_list_insert(&fstack, &c->flink);
 
 	/* Set initial monitor, tags, floating status, and focus:
@@ -2303,6 +2317,19 @@ run(char *startup_cmd)
 	 * loop configuration to listen to libinput events, DRM events, generate
 	 * frame events at the refresh rate, and so on. */
 	wl_display_run(dpy);
+}
+
+void
+setcfact(const Arg *arg)
+{
+	Client *sel = focustop(selmon);
+
+	if(!arg || !sel || !selmon->lt[selmon->sellt]->arrange)
+		return;
+	sel->cweight = (float) (arg->f ? sel->cweight + arg->f : 1.0);
+	if (sel->cweight < 0)
+		sel->cweight = 0;
+	arrange(selmon);
 }
 
 void
@@ -2809,8 +2836,9 @@ tagmon(const Arg *arg)
 void
 tile(Monitor *m)
 {
-	unsigned int h, r, e = m->gaps, mw, my, ty, gap;
+	unsigned int h, e = m->gaps, mw, my, ty, gap;
 	int i, n = 0;
+	float mweight = 0, tweight = 0;
 	Client *c;
 
 	wl_list_for_each(c, &clients, link)
@@ -2826,22 +2854,34 @@ tile(Monitor *m)
 	else
 		mw = m->w.width - 2*gappx*e + gappx*e;
 	i = 0;
+	wl_list_for_each(c, &clients, link){
+		if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
+			continue;
+		if (i < m->nmaster)
+			mweight += c->cweight;
+		else
+			tweight += c->cweight;
+		i++;
+	}
+	i = 0;
 	gap = my = ty = gappx*e;
 	wl_list_for_each(c, &clients, link) {
 		if (!VISIBLEON(c, m) || c->isfloating || c->isfullscreen)
 			continue;
 		if (i < m->nmaster) {
-			r = MIN(n, m->nmaster) - i;
-			h = (m->w.height - my) / r - gap;
+			h = ROUND((m->w.height - my) * (c->cweight / mweight)) - gap;
 			resize(c, (struct wlr_box){.x = m->w.x + gap, .y = m->w.y + my,
 				.width = mw - gap, .height = h}, 0);
-			my += c->geom.height + gap;
+			if (my + c->geom.height + gap < m->w.height)
+				my += c->geom.height + gap;
+			mweight -= c->cweight;
 		} else {
-			r = n - i;
-			h = (m->w.height - ty) / r - gap;
+			h = ROUND((m->w.height - ty) * (c->cweight / tweight)) - gap;
 			resize(c, (struct wlr_box){.x = m->w.x + mw + gap, .y = m->w.y + ty,
 				.width = m->w.width - mw - 2*gap, .height = h}, 0);
-			ty += c->geom.height + gap;
+			if (ty + c->geom.height + gap < m->w.height)
+				ty += c->geom.height + gap;
+			tweight -= c->cweight;
 		}
 		i++;
 	}
@@ -3343,6 +3383,7 @@ createnotifyx11(struct wl_listener *listener, void *data)
 	c->surface.xwayland = xsurface;
 	c->type = X11;
 	c->bw = borderpx;
+	c->cweight = 1.0;
 
 	/* Listen to the various events it can emit */
 	LISTEN(&xsurface->events.associate, &c->associate, associatex11);

@@ -134,7 +134,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define __TERMINAL  "alacritty", "msg", "create-window"
 /* commands */
 static const char *termcmd[] = { __TERMINAL, NULL };
-static const char *menucmd[] = { "wofi", "--show", "drun", NULL };
+static const char *menucmd[] = { "rofi", "-show", "drun", "-show-icons", NULL };
 static const char *floatterm[] = { __TERMINAL, "--class", "floatterm", NULL };
 
 /* scratchpad commands */
@@ -157,6 +157,9 @@ static const Key keys[] = {
 	{ MODKEY,                    XKB_KEY_d,          incnmaster,     {.i = -1} },
 	{ MODKEY,                    XKB_KEY_h,          setmfact,       {.f = -0.05f} },
 	{ MODKEY,                    XKB_KEY_l,          setmfact,       {.f = +0.05f} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_H,          setcfact,       {.f = +0.25f} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_L,          setcfact,       {.f = -0.25f} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_K,          setcfact,       {.f = 0.0f} },
 	{ SUPER,                     XKB_KEY_Return,     zoom,           {0} },
 	{ MODKEY,                    XKB_KEY_Tab,        view,           {0} },
 	{ MODKEY,                    XKB_KEY_g,          togglegaps,     {0} },
